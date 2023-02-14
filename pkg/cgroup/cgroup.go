@@ -157,11 +157,11 @@ func readFile(filepath string) (res []byte, err error) {
 
 // The controller is defined via either type `memory` for cgroup v1 or via empty type for cgroup v2,
 // where the type is the second field in /proc/[pid]/cgroup file
-func detectControlPath(cgroupFilePath string, controller string) (string, error) {
+func detectControllersPath(cgroupFilePath string, controllers []string) (string, error) {
 	//nolint:gosec
 	cgroup, err := os.Open(cgroupFilePath)
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to read %s cgroup from cgroups file: %s", controller, cgroupFilePath)
+		return "", errors.Wrapf(err, "failed to read %s cgroup from cgroups file: %s", controllers, cgroupFilePath)
 	}
 	defer func() {
 		err := cgroup.Close()
@@ -185,12 +185,22 @@ func detectControlPath(cgroupFilePath string, controller string) (string, error)
 		// but no known container solutions support it.
 		if f0 == "0" && f1 == "" {
 			unifiedPathIfFound = string(fields[2])
-		} else if f1 == controller {
-			return string(fields[2]), nil
+		} else {
+			for _, ctl := range controllers {
+				if f1 == ctl {
+					return string(fields[2]), nil
+				}
+			}
 		}
 	}
 
 	return unifiedPathIfFound, nil
+}
+
+// The controller is defined via either type `memory` for cgroup v1 or via empty type for cgroup v2,
+// where the type is the second field in /proc/[pid]/cgroup file
+func detectControlPath(cgroupFilePath string, controller string) (string, error) {
+	return detectControllersPath(cgroupFilePath, []string{controller})
 }
 
 // See http://man7.org/linux/man-pages/man5/proc.5.html for `mountinfo` format.
