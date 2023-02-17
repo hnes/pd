@@ -213,6 +213,11 @@ basic-test: install-tools
 	go test $(BASIC_TEST_PKGS) || { $(FAILPOINT_DISABLE); exit 1; }
 	@$(FAILPOINT_DISABLE)
 
+flaky-test: install-tools
+	@$(FAILPOINT_ENABLE)
+	set -euo pipefail ; for pkg in $(BASIC_TEST_PKGS);do ./scripts/run-flaky-test.sh $$pkg ;done
+	@$(FAILPOINT_DISABLE)
+
 ci-test-job: install-tools dashboard-ui
 	@$(FAILPOINT_ENABLE)
 	CGO_ENABLED=1 go test -timeout=15m -tags deadlock -race -covermode=atomic -coverprofile=covprofile -coverpkg=./... $(shell ./scripts/ci-subtask.sh $(JOB_COUNT) $(JOB_INDEX))
